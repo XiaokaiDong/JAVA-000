@@ -1,1 +1,2 @@
 学习笔记
+程序仍然无法正常运行，是因为NettyHttpClientOutboundHandler#channelActive的使用不正确么？希望可以得到老师的解答。
