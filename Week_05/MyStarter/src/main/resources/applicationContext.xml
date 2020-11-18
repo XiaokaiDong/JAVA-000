@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                        http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+                        http://www.springframework.org/schema/context
+                        http://www.springframework.org/schema/context/spring-context-3.2.xsd
+                        http://www.springframework.org/schema/aop
+                        https://www.springframework.org/schema/aop/spring-aop.xsd
+                        http://www.springframework.org/schema/util
+                        https://www.springframework.org/schema/util/spring-util.xsd">
+
+    <util:list id="students" list-class="java.util.LinkedList">
+        <ref bean="student456"></ref>
+        <ref bean="student123"></ref>
+    </util:list>
+
+    <bean id="student123"
+          class="beans.domain.Student">
+        <property name="id" value="123" />
+        <property name="name" value="KK123" />
+    </bean>
+
+    <bean id="student100"
+          class="beans.domain.Student">
+        <property name="id" value="100" />
+        <property name="name" value="KK100" />
+    </bean>
+
+    <bean id="student456"
+          class="beans.domain.Student">
+        <property name="id" value="456" />
+        <property name="name" value="tt" />
+    </bean>
+
+    <bean id="class1" class="beans.domain.Klass">
+        <property name="students">
+            <list>
+                <ref bean="student100" />
+                <ref bean="student123" />
+
+            </list>
+        </property>
+    </bean>
+
+<!--  下面的会报错，但是实际上会把所有的单独声明的Students类型的Beand都注入进去  -->
+    <bean id="classAutowireByType" class="beans.domain.Klass" autowire="byType"/>
+    <bean id="classAutowireByName" class="beans.domain.Klass" autowire="byName"/>
+
+
+
+    <bean id="classWithListSetup" class="beans.domain.Klass">
+        <property name="students" ref="studentList"></property>
+    </bean>
+
+    <util:list id="studentList" list-class="java.util.LinkedList">
+        <ref bean="student456"></ref>
+    </util:list>
+
+    <bean id="studentFactory"
+          class="org.springframework.beans.factory.config.ObjectFactoryCreatingFactoryBean">
+        <property name="targetBeanName" value="student123"/>
+    </bean>
+
+    <!--  下面为构造器形式的注入  -->
+    <bean id="xmlClassInjectedByCnstrctrArg" class="beans.domain.Klass">
+        <constructor-arg name="students" ref="studentList"/>
+    </bean>
+
+    <!-- 按类型注入都无法精确控制注入的BEAN -->
+    <bean id="xmlClassInjectedByAutowiredCnstrctrArg" class="beans.domain.Klass" autowire="constructor">
+    </bean>
+
+</beans>
