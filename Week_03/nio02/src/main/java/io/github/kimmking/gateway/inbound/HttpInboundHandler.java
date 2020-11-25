@@ -18,7 +18,7 @@ public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
     
     public HttpInboundHandler(String proxyServer) {
         this.proxyServer = proxyServer;
-        handler = new NettyHttpClientOutboundHandler("127.0.0.1", 8803);
+        handler = new NettyHttpClientOutboundHandler("127.0.0.1", 8808);
         try {
             //临时测试，将连接放在构造函数中
             handler.connect();
