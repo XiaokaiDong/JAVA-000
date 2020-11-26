@@ -2,12 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b39a312b-2f4c-452f-a6b8-9c103477fe17" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/../Week_03/nio02/netty-gateway.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/NettyServerApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/NettyServerApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/inbound/HttpInboundHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/inbound/HttpInboundHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/outbound/netty4/HttpFillterOutboundHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/outbound/netty4/HttpFillterOutboundHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/outbound/netty4/NettyHttpClientOutboundHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Week_03/nio02/src/main/java/io/github/kimmking/gateway/outbound/netty4/NettyHttpClientOutboundHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Week_06/tables.sql" beforeDir="false" afterPath="$PROJECT_DIR$/../Week_06/tables.sql" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

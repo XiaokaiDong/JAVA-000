@@ -8,6 +8,7 @@
 	`sku_version` VARCHAR(255) NOT NULL COMMENT 'sku版本号' COLLATE 'utf8mb4_bin',
 	`from_id` VARCHAR(128) NOT NULL COMMENT '卖家ID' COLLATE 'utf8mb4_bin',
 	`to_id` VARCHAR(128) NOT NULL COMMENT '买家ID' COLLATE 'utf8mb4_bin',
+	`final_price` INT(13) NOT NULL COMMENT '最终价格',
 	`status` VARCHAR(20) NOT NULL COMMENT '订单状态' COLLATE 'utf8mb4_bin',
 	PRIMARY KEY (`id`) USING BTREE,
 	UNIQUE INDEX `order_id` (`order_id`) USING BTREE
