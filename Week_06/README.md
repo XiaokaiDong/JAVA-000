@@ -24,3 +24,15 @@ skuid + version为唯一索引。
 只是主表。里面会引用商品的skuid + version。
 
 订单表是一个流水表，是最主要的表。
+
+4.1、插入订单表数据
+
+比较了插入10万条数据的耗时，分别用MySQL和ORACLE执行，执行耗时如下：
+
+MySQL: 301500ms
+ORACLE: 85340ms
+
+可见有一个数量级的差距，两个数据库不再同一个机器上：
+
+MySQL: X86虚机 REDHAT7.2
+ORACLE: AIX小机 

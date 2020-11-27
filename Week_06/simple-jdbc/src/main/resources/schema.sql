@@ -1,4 +1,4 @@
-﻿--mysql建表语句
+--mysql建表语句
 CREATE TABLE `orders` (
 	`id` INT(13) NOT NULL AUTO_INCREMENT COMMENT 'id',
 	`order_id` BIGINT(64)  NOT NULL COMMENT '订单ID，有ID生成服务生成',
