@@ -1,5 +1,5 @@
 --mysql建表语句
-CREATE TABLE `orders` (
+CREATE TABLE `tb_orders` (
 	`id` INT(13) NOT NULL AUTO_INCREMENT COMMENT 'id',
 	`order_id` BIGINT(64)  NOT NULL COMMENT '订单ID，有ID生成服务生成',
 	`order_version` INT(13) NOT NULL COMMENT '订单版本号，防止ABA等更新问题',
@@ -12,7 +12,7 @@ CREATE TABLE `orders` (
 	`final_price` INT(13) NOT NULL COMMENT '最终价格',
 	`status` VARCHAR(20) NOT NULL COMMENT '订单状态' COLLATE 'utf8mb4_bin',
 	PRIMARY KEY (`id`) USING BTREE,
-	UNIQUE INDEX `order_id` (`order_id`) USING BTREE
+	UNIQUE INDEX `idx_order` (`order_id`) USING BTREE
 )
 COMMENT='订单主表'
 COLLATE='utf8mb4_bin'
@@ -20,7 +20,7 @@ ENGINE=InnoDB
 ;
 
 
-CREATE TABLE `commodities` (
+CREATE TABLE `tb_commodities` (
 	`id` INT(13) NOT NULL AUTO_INCREMENT COMMENT '商品id',
 	`name` VARCHAR(255) NOT NULL COMMENT '商品名称' COLLATE 'utf8mb4_bin',
 	`skuid` VARCHAR(255) NOT NULL COMMENT '商品编号' COLLATE 'utf8mb4_bin',
@@ -33,15 +33,15 @@ CREATE TABLE `commodities` (
 	`parameters` VARCHAR(128) NOT NULL COMMENT '商品参数' COLLATE 'utf8mb4_bin',
 	`merchant_id` INT(13) NOT NULL COMMENT '所属商户ID',
 	PRIMARY KEY (`id`) USING BTREE,
-	UNIQUE INDEX `product_id` (`skuid`, `version`) USING BTREE,
-	INDEX `create_time` (`create_time`) USING BTREE
+	UNIQUE INDEX `uk_sku_ver` (`skuid`, `version`) USING BTREE,
+	INDEX `idx_create_time` (`create_time`) USING BTREE
 )
 COMMENT='商品表。这里只保存商品的基本信息等结构化信息；至于商品特征等非结构化数据，放入面向的文档数据库。\r\n图片和视频放入对象存储。\r\n此表不允许更新与删除，只允许新增，新增时更新版本号。'
 COLLATE='utf8mb4_bin'
 ENGINE=InnoDB
 ;
 
-CREATE TABLE `user` (
+CREATE TABLE `tb_user` (
 	`id` INT(13) NOT NULL AUTO_INCREMENT COMMENT 'ID',
 	`user_id` VARCHAR(128) NOT NULL COMMENT '用户ID，用户的唯一标识，具有全局唯一性' COLLATE 'utf8mb4_general_ci',
 	`name` VARCHAR(255) NOT NULL COMMENT '用户名称' COLLATE 'utf8mb4_bin',
@@ -50,7 +50,8 @@ CREATE TABLE `user` (
 	`certified` INT(1) NOT NULL COMMENT '实名认证类型',
 	`score` INT(11) NOT NULL DEFAULT '0' COMMENT '积分',
 	`type` INT(4) NOT NULL COMMENT '用户类型：1，普通用户；2，商户；3，即是用户又是商户',
-	PRIMARY KEY (`id`) USING BTREE
+	PRIMARY KEY (`id`) USING BTREE,
+	INDEX `id_userid_name` (`user_id`, `name`)
 )
 COMMENT='用户表。\r\n此表只保存用户基本信息。\r\n至于用户头像独存储。\r\n用户权限单独存储，符合关系数据库的范式。\r\n登陆历史、浏览历史需要单独保存。'
 COLLATE='utf8mb4_general_ci'
