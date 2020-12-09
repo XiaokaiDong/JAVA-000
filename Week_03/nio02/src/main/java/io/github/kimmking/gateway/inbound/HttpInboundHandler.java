@@ -13,19 +13,11 @@ public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
 
     private static Logger logger = LoggerFactory.getLogger(HttpInboundHandler.class);
     private final String proxyServer;
-    //private HttpOutboundHandler handler;
-    private NettyHttpClientOutboundHandler handler;
+    private HttpOutboundHandler handler;
     
     public HttpInboundHandler(String proxyServer) {
         this.proxyServer = proxyServer;
-        handler = new NettyHttpClientOutboundHandler("127.0.0.1", 8808);
-        try {
-            //临时测试，将连接放在构造函数中
-            handler.connect();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        //handler = new HttpOutboundHandler(proxyServer);
+        handler = new HttpOutboundHandler(proxyServer);
     }
     
     @Override
@@ -54,7 +46,12 @@ public class HttpInboundHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-//    private void handlerTest(FullHttpRequest fullRequest, ChannelHandlerContext ctx) {
+    @Override
+    public void channelActive(ChannelHandlerContext ctx) throws Exception {
+        super.channelActive(ctx);
+    }
+
+    //    private void handlerTest(FullHttpRequest fullRequest, ChannelHandlerContext ctx) {
 //        FullHttpResponse response = null;
 //        try {
 //            String value = "hello,kimmking";

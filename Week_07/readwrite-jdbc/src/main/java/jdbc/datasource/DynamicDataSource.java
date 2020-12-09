@@ -10,8 +10,6 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
 
     /**
      * sql session与线程挂钩
-     * @param defaultMultiDataSources 默认数据源
-     * @param targetDataSources       目标数据源
      */
     private static final ThreadLocal<Boolean> MULTI_DATA_SOURCES_THREAD_LOCAL = new ThreadLocal<>();
 
@@ -19,6 +17,10 @@ public class DynamicDataSource extends AbstractRoutingDataSource {
         MULTI_DATA_SOURCES_THREAD_LOCAL.set(false);
     }
 
+    /**
+     * @param defaultMultiDataSources 默认数据源
+     * @param targetDataSources       目标数据源
+     */
     public DynamicDataSource(MultiDataSources defaultMultiDataSources, Map<Object, Object> targetDataSources){
         super.setDefaultTargetDataSource(defaultMultiDataSources);
         super.setTargetDataSources(targetDataSources);
