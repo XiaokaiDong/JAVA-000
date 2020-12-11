@@ -205,4 +205,271 @@
 
 - Week_08周六(12/05)
   - 作业 2（选做6）：TCC事务框架。
-  - 提交截止点没有做完，后续完善
+  - 提交截止点没有做完，后续完善（20201209）
+  - 20201211进行了初步完善
+
+    主要使用了JAVA的CompletableFuture进行开发，目前还只是一个原型，但是基本功能点已经完备了。大体想法如下：
+
+    根据请求生成TransactionProperties
+    ```java
+    public interface Request {
+    TransactionProperties getTransactionProperties();
+    }
+    ```
+
+    然后根据TransactionProperties得到TransactionBuilder
+    ```java
+    TransactionBuilder<?> initializeTransactionBuilder();
+    ```
+
+    然后就可以构建事务了
+    ```java
+    public interface TransactionBuilder<T extends Transaction> {
+    T build();
+    }
+    ```
+
+    事务管理器作为系统的主控将事务提交个线程池执行
+    ```java
+    public class AbstractTransactionManager implements TransactionManager {
+
+    //执行任务的线程池
+    private ExecutorService executorService;
+
+    //接收请求的单端阻塞队列
+    private Queue<Request> requests = new ArrayBlockingQueue<>(100);
+
+    public AbstractTransactionManager(ExecutorService executorService) {
+        this.executorService = executorService;
+    }
+
+    @Override
+    public Transaction buildTransactionFrom(Supplier<TransactionProperties> transactionPropertiesFactory) {
+        TransactionProperties transactionProperties = transactionPropertiesFactory.get();
+        return transactionProperties.initializeTransactionBuilder().build();
+    }
+
+    @Override
+    public void startTccTx(Transaction transaction) {
+        executorService.submit(transaction);
+    }
+
+    @Override
+    public boolean take(Supplier<Request> requestFactory) {
+        return requests.add(requestFactory.get());
+    }
+
+    @Override
+    public void serve() {
+        Request request = requests.poll();
+        Transaction transaction = buildTransactionFrom(() -> request.getTransactionProperties());
+        executorService.submit(transaction);
+    }
+
+
+    }
+    ```
+
+    每个事务定义如下
+    ```java
+    public interface Transaction extends Runnable{
+    /**
+     * 返回事务ID
+     * @return 事务ID
+     */
+    String getTxID();
+
+    /**
+     * 设置线程池，实现事物之间的隔离
+     * @param executor 线程池
+     */
+    void setExecutor(Executor executor);
+
+    /**
+     * 设置事务的上下文，避免在TCC服务间频繁传递参数
+     * @param request
+     */
+    void setContext(Request request);
+
+    }
+    ```
+
+    实现了一个只能串行执行的事务（比如支付系统）
+    ```java
+    public class BasicSerialTransaction implements Transaction {
+    private String txID;
+
+    private Request request;
+
+    //需要cancel的任务数量
+    private AtomicInteger cancelIndex = new AtomicInteger(0);
+
+    //重试次数
+    private AtomicInteger retryTime = new AtomicInteger(0);
+
+    //最大重试次数
+    private final static int maxRetryTime = 3;
+
+    //是否允许各个参与的服务并发执行
+    private boolean paralleled = false;
+
+    //这里TCC事务涉及到的各个参与方是有顺序的，在builder中应该按照Transaction的定义按序添加TccService
+    private List<TccService> participator;
+
+    //执行TCC服务的栈
+    private Deque<CompletableFuture<Void>> tasksStack = new ConcurrentLinkedDeque<>();
+
+    //当前执行的TCC服务
+    private AtomicInteger currTccService = new AtomicInteger(0);
+
+    //执行任务的线程池
+    private Executor executor;
+
+    //需要在confirm阶段重试的参与方
+    private Set<TccService> needReconfirmServices = new ConcurrentSkipListSet<>();
+
+    //只允许用相应的Builder进行建造
+    private BasicSerialTransaction() {}
+
+    @Override
+    public String getTxID() {
+        return txID;
+    }
+
+    @Override
+    public void setExecutor(Executor executor) {
+        this.executor = executor;
+    }
+
+    @Override
+    public void setContext(Request request) {
+        this.request = request;
+    }
+
+    private void init() {
+        for (TccService tccService: participator ) {
+            tccService.tccStart(txID);
+        }
+
+    }
+
+    /**
+     * 执行这个事物
+     */
+    @Override
+    public void run() {
+        init();
+
+        if (participator.size() == 0)
+            return;
+
+        tryIt();
+
+        if (cancelIndex.get() > 0) {
+            cancel();
+        } else {
+            while (maxRetryTime > 0 && !needReconfirmServices.isEmpty()) {
+                confirm();
+            }
+        }
+
+    }
+
+    /**
+     * try阶段
+     */
+    private void tryIt() {
+        //使用栈进行
+        CompletableFuture<Void> head = CompletableFuture
+                .runAsync(() -> {
+                    participator.get(currTccService.get()).tccTry(request);
+                }, executor)
+                .thenRunAsync(() -> {
+                    this.needReconfirmServices.add(participator.get(currTccService.get()));
+                }, executor)
+                .exceptionally((e) -> {      //如果发生异常，则1、结束整个流程；2、cancel自己
+                    log.info("The service [{}] failed because: {}",
+                            participator.get(currTccService.get()).getName(),
+                            e.getMessage());
+
+                    //try发生异常，直接结束处理
+                    currTccService.set(participator.size());
+                    //cancel，记录需要cancel的任务数量，由取消线程统一处理
+                    cancelIndex.set(currTccService.get());
+
+                    return null;
+                });
+
+        //放入堆栈，开启流程
+        tasksStack.push(head);
+
+        CompletableFuture<Void> task = null;
+        do {
+            task = tasksStack.pop();
+            if(currTccService.get() < participator.size()) {
+                //取下一个分布式事务的参与方
+                task.thenRunAsync(() -> {
+                    participator.get(currTccService.incrementAndGet()).tccTry(request);
+                }, executor)
+                    //如果成功,则放入confirm集合
+                    .thenRunAsync(() -> {
+                        needReconfirmServices.add(participator.get(currTccService.get()));
+                    }, executor)
+                    .exceptionally((e) -> {
+                        log.info("Try service [{}] failed because: {}",
+                                participator.get(currTccService.get()).getName(),
+                                e.getMessage());
+
+                        //try发生异常，直接结束处理
+                        currTccService.set(participator.size());
+                        //cancel，记录需要cancel的任务数量，由取消线程统一处理
+                        cancelIndex.set(currTccService.get());
+
+                        return null;
+                    });
+                tasksStack.push(task);
+            }
+
+        } while(task != null);
+    }
+
+    private void cancel() {
+        //进行cancel处理
+        while (cancelIndex.get() > 0) {
+            participator.get(cancelIndex.decrementAndGet()).tccCancel(request);
+        }
+    }
+
+    private void confirm() {
+        Iterator<TccService> it = needReconfirmServices.iterator();
+        while(it.hasNext()) {
+            TccService service = it.next();
+            CompletableFuture
+                    .runAsync(() -> {service.tccConfirm(request);})
+                    .thenRunAsync(() -> needReconfirmServices.remove(service))
+                    .exceptionally((e) -> {
+                        log.info("the service confirm failed because {}, will retry for [{}] round",
+                                e.getCause(), retryTime.get());
+                        return null;
+                    });
+        }
+        retryTime.incrementAndGet();
+    }
+    }
+    ```
+
+    由事务驱动TccService进行交易
+    ```java
+    public interface TccService {
+    <T> void tccTry(T tryContext);
+    <T> void tccConfirm(T confirmContext);
+    <T> void tccCancel(T cancelContext);
+
+    /**
+     * 初始化一个服务，初始化需要将这个服务的状态等相关信息序列化，比如序列化到数据库中或者消息队列中
+     * @param txId，所属交易的ID
+     */
+    void tccStart(String txId);
+    String getName();
+    }
+    ```
