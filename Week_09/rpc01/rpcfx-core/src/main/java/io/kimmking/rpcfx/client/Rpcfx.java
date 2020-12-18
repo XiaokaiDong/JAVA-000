@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.parser.ParserConfig;
 import io.kimmking.rpcfx.api.RpcfxRequest;
 import io.kimmking.rpcfx.api.RpcfxResponse;
+import io.kimmking.rpcfx.client.channel.NettyHttpClient;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.net.URL;
 
 public final class Rpcfx {
 
@@ -59,19 +61,29 @@ public final class Rpcfx {
         }
 
         private RpcfxResponse post(RpcfxRequest req, String url) throws IOException {
-            String reqJson = JSON.toJSONString(req);
-            System.out.println("req json: "+reqJson);
+            RpcfxResponse response = null;
+            URL uri = new URL(url);
+            try {
+                response = NettyHttpClient.post(req, uri);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
-            // 1.可以复用client
-            // 2.尝试使用httpclient或者netty client
-            OkHttpClient client = new OkHttpClient();
-            final Request request = new Request.Builder()
-                    .url(url)
-                    .post(RequestBody.create(JSONTYPE, reqJson))
-                    .build();
-            String respJson = client.newCall(request).execute().body().string();
-            System.out.println("resp json: "+respJson);
-            return JSON.parseObject(respJson, RpcfxResponse.class);
+            return response;
+
+//            String reqJson = JSON.toJSONString(req);
+//            System.out.println("req json: "+reqJson);
+//
+//            // 1.可以复用client
+//            // 2.尝试使用httpclient或者netty client
+//            OkHttpClient client = new OkHttpClient();
+//            final Request request = new Request.Builder()
+//                    .url(url)
+//                    .post(RequestBody.create(JSONTYPE, reqJson))
+//                    .build();
+//            String respJson = client.newCall(request).execute().body().string();
+//            System.out.println("resp json: "+respJson);
+//            return JSON.parseObject(respJson, RpcfxResponse.class);
         }
     }
 }

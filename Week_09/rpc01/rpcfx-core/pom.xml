@@ -38,14 +38,21 @@
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-all</artifactId>
-			<version>4.1.28.Final</version>
+<!--			<version>4.1.28.Final</version>-->
 		</dependency>
 
 		<dependency>
-			<groupId>org.aspectj</groupId>
-			<artifactId>aspectjweaver</artifactId>
-			<version>1.9.5</version>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+			<version>1.18.16</version>
 		</dependency>
+
+<!--		<dependency>-->
+<!--			<groupId>org.aspectj</groupId>-->
+<!--			<artifactId>aspectjweaver</artifactId>-->
+<!--			<version>1.9.5</version>-->
+<!--		</dependency>-->
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -67,6 +74,9 @@
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy</artifactId>
         </dependency>
-    </dependencies>
+
+
+
+	</dependencies>
 
 </project>
