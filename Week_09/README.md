@@ -206,45 +206,93 @@
 
 - 第二次作业
 
-  使用内部账户BGL作为转账处理，这样confirm不需要有实际性动作，cancel也很简单
+  使用内部账户BGL作为转账处理，这样confirm不需要有实际性动作，cancel也很简单。资金转到BGL后，再进行清算，BGL之间的转账不写在程序中
   ```java
-    @Slf4j
-    @Service
-    @DubboService(retries = 0)
-    public class TransferServiceImpl implements TransferService {
+    /**
+     *
+     * @param from 转出账户
+     * @param amount 金额，用正负表示借贷方向
+     * @return
+     */
+    @Override
+    @HmilyTCC(confirmMethod = "confirm", cancelMethod = "cancel")
+    @Transactional
+    public boolean transferMoney(Account from, int amount) {
+        log.info("transfering to BGL...");
+        Account targetBgl = from.getCurrencyType().equals("CNY") ? bglCleaningForCNY : bglCleaningForUSD;
+        boolean outResult = accountMapper.transferOut(from, amount) > 0;
+        boolean inResult = accountMapper.transferOut(targetBgl, -amount) > 0;
+        return outResult && inResult;
+        //int amountTransfer = RateUtil.CNY2USD(amount);
+    }
 
-        @Autowired(required = false)
-        private AccountMapper accountMapper;
+    /**
+     * 因为在try步已经把资金转入了内部账户，所以此时什么也不需要做
+     * @param from
+     * @return
+     */
+    public boolean confirm(Account from) {
+        return true;
+    }
 
-        @Override
-        @Transactional
-        @HmilyTCC(confirmMethod = "confirm", cancelMethod = "cancel")
-        public boolean transferMoney(Account account) {
-            log.info("transfering to BGL...");
-
-            boolean from = accountMapper.transferOut(account) > 0;
-            boolean to = accountMapper.transferIn2Bgl(account) > 0;
-
-            return from && to;
-        }
-
-        /**
-        * 因为在try步已经把资金转入了内部账户，所以此时什么也不需要做
-        * @param account
-        * @return
-        */
-        public boolean confirm(Account account) {
-            return true;
-        }
-
-        public boolean cancel(Account account) {
-            log.info("begin to inverse...");
-            //将金额取负数
-            account.setAmount(-account.getAmount());
-            boolean from = accountMapper.transferOut(account) > 0;
-            boolean to = accountMapper.transferIn2Bgl(account) > 0;
-
-            return from && to;
-        }
+    public boolean cancel(Account from, int amount) {
+        log.info("begin to inverse...");
+        //将金额取负数
+        Account targetBgl = from.getCurrencyType().equals("CNY") ? bglCleaningForCNY : bglCleaningForUSD;
+        boolean outRevResult = accountMapper.transferOut(from, -amount) > 0;
+        boolean inRevResult = accountMapper.transferOut(targetBgl, amount) > 0;
+        return outRevResult && inRevResult;
     }
   ```
+
+    然后使用ExchangeDealService驱动两个服务间的转账
+    ```java
+    @Override
+    @HmilyTCC(confirmMethod = "confirmDealStatus", cancelMethod = "cancelDealStatus")
+    public boolean buyUSDWithCNY(Account USDAccount, Account CNYAccount, int amountUSD) {
+        ExchangeDeal deal = saveDealBuyUSDWithCNY(USDAccount, CNYAccount,amountUSD);
+
+        //先将人民币账户的钱转入清算用BGL
+        int amountCNY = RateUtil.USD2CNY(amountUSD);
+        accountServiceOne.transferMoney(CNYAccount, amountCNY);
+        updateDealStatus(deal, DealStatusEnum.DEBIT_FINISHED);
+
+        //再将美元账户的头寸转入清算用BGL
+        accountServiceTwo.transferMoney(USDAccount, amountUSD);
+        updateDealStatus(deal, DealStatusEnum.CREDIT_FINISHED);
+
+        return false;
+    }
+
+    private ExchangeDeal saveDealBuyUSDWithCNY(Account USDAccount, Account CNYAccount, int amountUSD){
+        final ExchangeDeal deal = buildDealBuyUSDWithCNY(USDAccount, CNYAccount,amountUSD);
+        exchangeDealMapper.save(deal);
+        return deal;
+    }
+
+    private ExchangeDeal buildDealBuyUSDWithCNY(Account USDAccount, Account CNYAccount, int amountUSD){
+        ExchangeDeal deal = new ExchangeDeal();
+        deal.setCreateTime(new Date());
+        deal.setDealId(UUID.randomUUID().toString());
+        deal.setAccountNumCredit(USDAccount.getAccountNum());
+        deal.setAccountNumDebit(CNYAccount.getAccountNum());
+        deal.setTotalAmount(amountUSD);
+        deal.setStatus(DealStatusEnum.STARTED.getCode());
+        return deal;
+    }
+
+    private void updateDealStatus(ExchangeDeal deal, DealStatusEnum dealStatus){
+        deal.setStatus(dealStatus.getCode());
+        exchangeDealMapper.update(deal);
+    }
+
+    public void confirmOrderStatus(ExchangeDeal deal) {
+        updateDealStatus(deal, DealStatusEnum.SUCCESS);
+        log.info("=========confirm操作完成================");
+    }
+
+    public void cancelOrderStatus(ExchangeDeal deal) {
+        updateDealStatus(deal, DealStatusEnum.FAILED);
+        log.info("=========cancel操作完成================");
+    }
+    ```
