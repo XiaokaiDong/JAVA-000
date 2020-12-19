@@ -3,8 +3,8 @@ package io.kimmking.service;
 import io.kimmking.entity.Account;
 import org.dromara.hmily.annotation.Hmily;
 
-public interface TransferService {
+public interface ExchangeDealService {
 
     @Hmily
-    boolean transferMoney(Account account);
+    boolean buyUSDWithCNY(Account USDAccount, Account CNYAccount, int amountUSD);
 }

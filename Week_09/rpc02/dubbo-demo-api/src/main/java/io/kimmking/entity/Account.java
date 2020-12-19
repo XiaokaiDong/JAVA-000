@@ -1,16 +1,14 @@
 package io.kimmking.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
+@Builder
 public class Account {
-    private long accountNum;
+    private int accountNum;
 
     //以分为单位
     private int amount;

@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: dubbo-demo-provider
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:3306/account?useUnicode=true&characterEncoding=utf8
+    username: root
+    password:
 dubbo:
   scan:
     base-packages: io.kimmking.dubbo.demo.provider
@@ -14,3 +19,7 @@ dubbo:
     address: zookeeper://localhost:2181
   metadata-report:
     address: zookeeper://localhost:2181
+
+mybatis:
+  type-aliases-package: org.dromara.hmily.demo.common.account.entity
+  config-location: classpath:mybatis/mybatis-config.xmlhmily.yml
