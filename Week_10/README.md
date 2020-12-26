@@ -1,3 +1,5 @@
+## 1、主要工作
+
 本周没有必做作业，所以先花大部分精力基于第9周实现的NETTY HTTP客户端完成了第三周的NETTY网关，性能还可以。在预热后，性能还可以超过HTTPCLIENT4，但这个压测结果太过于简单了。在高并发下（>40个并发，每个并发1500个请求，性能会下降，链接池出现阻塞）
 
 网关使用连接池管理链接。搭建了一个简单的连接池。经过简单的压测，在其他条件相同的情况下，性能强于同样采用异步方式的HTTPCLIENT4。
@@ -325,3 +327,97 @@
         System.exit(-1);
     }
     ```
+
+## 2、补充第10周本周作业。20201226
+
+- 为上周的Rpcfx增加分组和版本
+
+  - 在上周的基础上，给注解RpcfxService增加了若干属性
+
+  ```java
+  public @interface RpcfxService {
+    String url();
+    String group() default "";
+    String version() default "";
+    String registry() default "";
+    }
+  ```
+
+  然后在RpcfxInvocationHandler.RpcfxInvocationHandler#invoke中获取相关属性，并得到最终URL
+  ```java
+    RpcfxService rpcfxService = method.getAnnotation(RpcfxService.class);
+    String group = rpcfxService.group();
+    if (!group.isEmpty()) {
+        String registry = rpcfxService.registry();
+        String version = rpcfxService.version();
+        RpcfxRegistryCenter rpcfxRegistryCenter =
+                applicationContext.getBean("registry", RpcfxRegistryCenter.class);
+
+        url = rpcfxRegistryCenter.getUrl(group, version);
+
+    }
+  ```
+
+  RpcfxInvocationHandler.RpcfxInvocationHandler实现了ApplicationContextAware。
+
+  - 在客户端增加类LocalRegistryConfiguration，并默认概统了一个构造函数，简化这个DEMO的处理，没有使用从配置文件注入配置值。
+
+    ```java
+    public class LocalRegistryConfiguration {
+    private Map<String, List<String>> localRegistry = new ConcurrentHashMap<>();
+
+    /**
+     * 默认构造函数，这里作为DEMO，写死一个"注册表"
+     */
+    public LocalRegistryConfiguration() {
+        List<String> redGroup = new CopyOnWriteArrayList<>();
+        redGroup.add("http://localhost:8081/red/");
+        redGroup.add("http://localhost:8082/red/");
+        localRegistry.putIfAbsent("red", redGroup);
+
+        List<String> blueGroup = new CopyOnWriteArrayList<>();
+        blueGroup.add("http://localhost:8083/blue/");
+        blueGroup.add("http://localhost:8084/blue/");
+        localRegistry.putIfAbsent("blue", blueGroup);
+    }
+
+    public List<String> getGroup(String groupName) {
+        return localRegistry.get(groupName);
+    }
+
+    public Set<String> getGroupName() {
+        return localRegistry.keySet();
+    }
+    }
+    ```
+
+    - 在客户端增加RpcfxRegistryCenter的实现类LocalRegistry，从本地读取配置，并实现了Round-Robin负载算法
+
+      ```java
+        public class LocalRegistry implements RpcfxRegistryCenter {
+        @Autowired
+        private LocalRegistryConfiguration registryConfiguration;
+
+        private Map<String, Integer> currentIndex = new ConcurrentHashMap<>();
+        private Map<String, Integer> groupSize = new ConcurrentHashMap<>();
+
+        @PostConstruct
+        public void initIndexArray(){
+            Set<String> groupNames = registryConfiguration.getGroupName();
+            for (String groupName : groupNames) {
+                currentIndex.putIfAbsent(groupName, 0);
+                groupSize.putIfAbsent(groupName, registryConfiguration.getGroup(groupName).size());
+            }
+        }
+
+        @Override
+        public String getUrl(String group, String version) {
+            String dstUrl = null;
+            List<String> groupUrl = registryConfiguration.getGroup(group);
+            if (groupUrl != null) {
+                dstUrl = groupUrl.get(ThreadLocalRandom.current().nextInt() % groupSize.get(group));
+            }
+            return dstUrl + version + "/";
+        }
+    }
+      ```
