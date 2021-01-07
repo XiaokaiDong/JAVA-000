@@ -8,3 +8,14 @@ logging:
         cache : info
 
 # 作业，在这里使用spring boot配置各项内容，
+spring:
+  redis:
+    sentinel:
+      master: mymaster
+      nodes: 127.0.0.1:26379,127.0.0.1:26380
+    lettuce:
+      pool:
+        max-idle: 10
+        max-active: 20
+        min-idle: 5
+        max-wait: 10000ms
